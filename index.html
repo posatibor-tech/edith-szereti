@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Edith szereti">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f3f1f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16131d" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>Edith szereti</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+/* Layout: one narrow phone column — sticky search bar, list of taste cards, floating add button, bottom sheet form */
+:root{
+  --bg:#f3f1f7; --surface:#ffffff; --ink:#221d2e; --muted:#6c6580; --line:#e2dded;
+  --accent:#5b3fa8; --accent-ink:#ffffff; --accent-soft:#ebe5f8;
+  --like:#1f7a4d; --like-soft:#e1f2e8; --dislike:#b3323a; --dislike-soft:#f8e3e4;
+  --mixed:#9a6a00; --mixed-soft:#f6edd6; --fact:#3f5f8a; --fact-soft:#e2eaf5;
+  --shadow:0 1px 2px rgba(34,29,46,.06),0 6px 20px rgba(34,29,46,.06);
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,-apple-system,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#16131d; --surface:#1f1b29; --ink:#ece8f5; --muted:#a39cb6; --line:#332d42;
+  --accent:#b39cf2; --accent-ink:#1a1424; --accent-soft:#2c2541;
+  --like:#6fd3a0; --like-soft:#183326; --dislike:#f08a90; --dislike-soft:#3a1d22;
+  --mixed:#e3bb5c; --mixed-soft:#352a12; --fact:#94b5e6; --fact-soft:#1c2738;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#16131d; --surface:#1f1b29; --ink:#ece8f5; --muted:#a39cb6; --line:#332d42;
+  --accent:#b39cf2; --accent-ink:#1a1424; --accent-soft:#2c2541;
+  --like:#6fd3a0; --like-soft:#183326; --dislike:#f08a90; --dislike-soft:#3a1d22;
+  --mixed:#e3bb5c; --mixed-soft:#352a12; --fact:#94b5e6; --fact-soft:#1c2738;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25); color-scheme:dark}
+
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);-webkit-text-size-adjust:100%}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;padding-inline:16px;padding-block:0 110px}
+.wrap{max-width:640px;margin:0 auto}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(1.9rem,7vw,2.5rem);letter-spacing:-.02em;line-height:1;margin:0;text-wrap:balance}
+.brand{display:flex;align-items:center;gap:14px}.brand-t{min-width:0;display:flex;flex-direction:column;gap:4px}
+.logo{width:72px;height:72px;border-radius:50%;object-fit:cover;flex:none;border:2px solid var(--line)}
+header.top{padding-block:22px 6px;display:flex;flex-direction:column;gap:6px}
+.sub{color:var(--muted);font-size:.92rem;margin:0}
+.stats{display:flex;gap:14px;flex-wrap:wrap;font-size:.88rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.stats b{color:var(--ink)}
+
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px;display:flex;flex-direction:column;gap:8px}
+.search{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:0 12px}
+.search svg{flex:none;color:var(--muted)}
+.search input{flex:1;min-width:0;border:0;background:transparent;font:inherit;color:var(--ink);padding:12px 0;outline:none}
+.search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;font:inherit;font-size:.85rem;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.row2{display:flex;gap:8px}
+.row2 select{flex:1;min-width:0}
+select,input[type=text],input[type=date],textarea{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 10px;width:100%}
+select:focus,input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+
+.list{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.card-row{display:flex;align-items:stretch}
+.card-row>button.head{flex:1;min-width:0}
+.rate-q{flex:none;font:inherit;border:0;border-left:1px solid var(--line);background:transparent;color:var(--accent);width:48px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.rate-q:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.trend{font-weight:700;font-variant-numeric:tabular-nums}
+.trend.up{color:var(--like)} .trend.down{color:var(--dislike)}
+.spark{width:100%;height:auto;display:block}
+.spark .ln{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.spark .ar{fill:var(--accent-soft)}
+.spark .gr{stroke:var(--line);stroke-width:1}
+.spark .pt{fill:var(--surface);stroke:var(--accent);stroke-width:2}
+.spark .pt.last{fill:var(--accent)}
+.spark text{fill:var(--muted);font-size:10px;font-family:var(--body)}
+.card-row>button.head{all:unset;box-sizing:border-box;display:grid;grid-template-columns:6px 1fr auto;gap:12px;width:100%;padding:12px 14px 12px 0;cursor:pointer;align-items:center}
+.card-row>button.head:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:14px}
+.stripe{align-self:stretch;border-radius:0 4px 4px 0}
+.v-like .stripe{background:var(--like)} .v-dislike .stripe{background:var(--dislike)}
+.v-mixed .stripe{background:var(--mixed)} .v-fact .stripe{background:var(--fact)}
+.main{min-width:0;display:flex;flex-direction:column;gap:3px}
+.name{font-weight:700;font-size:1.02rem;overflow-wrap:anywhere}
+.meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
+.pill{font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:6px}
+.v-like .pill{background:var(--like-soft);color:var(--like)} .v-dislike .pill{background:var(--dislike-soft);color:var(--dislike)}
+.v-mixed .pill{background:var(--mixed-soft);color:var(--mixed)} .v-fact .pill{background:var(--fact-soft);color:var(--fact)}
+.note{font-size:.88rem;color:var(--muted);overflow-wrap:anywhere}
+.score{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.num{font-family:var(--display);font-weight:800;font-size:1.5rem;line-height:1;font-variant-numeric:tabular-nums}
+.num small{font-size:.7rem;color:var(--muted);font-weight:600}
+.num.none{font-size:1rem;color:var(--muted)}
+.dots{display:grid;grid-template-columns:repeat(10,5px);gap:2px}
+.dots i{height:5px;border-radius:2px;background:var(--line)}
+.v-like .dots i.on{background:var(--like)} .v-dislike .dots i.on{background:var(--dislike)}
+.v-mixed .dots i.on{background:var(--mixed)} .v-fact .dots i.on{background:var(--fact)}
+
+.detail{border-top:1px solid var(--line);padding:12px 14px 14px 18px;display:flex;flex-direction:column;gap:10px}
+.hist-title{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;margin:0}
+.hist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.hist li{display:grid;grid-template-columns:96px 1fr;gap:8px;font-size:.88rem}
+.hist .d{color:var(--muted);font-variant-numeric:tabular-nums}
+.hist .t{min-width:0;overflow-wrap:anywhere}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:inherit;font-size:.9rem;font-weight:700;border-radius:10px;padding:9px 14px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--dislike);border-color:var(--dislike-soft)}
+.btn.danger.sure{background:var(--dislike);color:var(--surface);border-color:var(--dislike)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn[disabled]{opacity:.5;cursor:default}
+
+.backup{margin-top:28px;border-top:1px solid var(--line);padding-top:16px;display:flex;flex-direction:column;gap:10px}
+.backup h2{font-family:var(--display);font-weight:800;font-size:1.1rem;margin:0}
+.backup .actions{gap:8px}
+.empty{text-align:center;color:var(--muted);padding:40px 12px;display:flex;flex-direction:column;gap:6px;align-items:center}
+.empty strong{color:var(--ink);font-family:var(--display);font-size:1.15rem}
+.notice{background:var(--mixed-soft);color:var(--ink);border-radius:12px;padding:12px 14px;font-size:.9rem;margin-top:10px}
+
+.fab{position:fixed;right:max(16px,calc(50% - 304px));bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:10;font:inherit;font-weight:700;font-size:1rem;display:flex;align-items:center;gap:8px;background:var(--accent);color:var(--accent-ink);border:0;border-radius:999px;padding:14px 20px;box-shadow:var(--shadow);cursor:pointer}
+.fab:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+
+.scrim{position:fixed;inset:0;background:rgba(20,16,28,.45);z-index:20}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--surface);border-radius:20px 20px 0 0;max-height:92%;overflow-y:auto;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));box-shadow:var(--shadow)}
+.sheet-in{max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.sheet h2{font-family:var(--display);font-weight:800;font-size:1.4rem;margin:0}
+.field{display:flex;flex-direction:column;gap:6px}
+.field>label,.field>.lbl{font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.seg button{font:inherit;font-size:.85rem;font-weight:700;padding:10px 4px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.seg button[aria-pressed="true"][data-v=like]{background:var(--like-soft);border-color:var(--like);color:var(--like)}
+.seg button[aria-pressed="true"][data-v=dislike]{background:var(--dislike-soft);border-color:var(--dislike);color:var(--dislike)}
+.seg button[aria-pressed="true"][data-v=mixed]{background:var(--mixed-soft);border-color:var(--mixed);color:var(--mixed)}
+.seg button[aria-pressed="true"][data-v=fact]{background:var(--fact-soft);border-color:var(--fact);color:var(--fact)}
+.range-row{display:flex;align-items:center;gap:12px}
+.range-row input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
+.range-row output{font-family:var(--display);font-weight:800;font-size:1.6rem;width:2.4ch;text-align:right;font-variant-numeric:tabular-nums}
+.check{display:flex;align-items:center;gap:8px;font-size:.9rem;color:var(--muted)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hint{font-size:.82rem;color:var(--muted);margin:0}
+.err{color:var(--dislike);font-size:.88rem;margin:0}
+textarea{resize:vertical;min-height:64px}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .22s ease-out}@keyframes up{from{transform:translateY(30px);opacity:.6}}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <img class="logo" src="icon-192.png" alt="Edith két fagylalttölcsérrel" width="72" height="72">
+      <div class="brand-t">
+        <h1>Edith szereti</h1>
+        <p class="sub">Mit szeret, mit nem – és hogyan változik.</p>
+      </div>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <div class="bar">
+    <div class="search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Keresés: kávé, karamell, sör…" autocomplete="off" aria-label="Keresés">
+    </div>
+    <div class="chips" id="vchips" role="group" aria-label="Szűrés ítélet szerint"></div>
+    <div class="row2">
+      <select id="cat" aria-label="Kategória"></select>
+      <select id="sort" aria-label="Rendezés">
+        <option value="recent">Legutóbb jelölt</option>
+        <option value="high">Pontszám: magas → alacsony</option>
+        <option value="low">Pontszám: alacsony → magas</option>
+        <option value="abc">ABC sorrend</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="notice"></div>
+  <div class="list" id="list" aria-live="polite"></div>
+
+  <section class="backup" aria-labelledby="bk-h">
+    <h2 id="bk-h">Biztonsági mentés</h2>
+    <p class="hint" id="bk-info">Az adatok csak ezen a telefonon vannak. Időnként ments egy példányt (pl. a Fájlok appba vagy e-mailben magadnak).</p>
+    <div class="actions">
+      <button class="btn" type="button" id="bk-export">Mentés fájlba</button>
+      <button class="btn" type="button" id="bk-import">Visszatöltés fájlból</button>
+      <input type="file" id="bk-file" accept="application/json,.json" hidden>
+    </div>
+    <div class="actions" id="bk-confirm" hidden>
+      <button class="btn primary" type="button" id="bk-yes">Igen, betöltöm</button>
+      <button class="btn" type="button" id="bk-no">Mégse</button>
+    </div>
+    <p class="hint" id="bk-msg" hidden></p>
+  </section>
+</div>
+
+<button class="fab" id="add" type="button">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+  Új jelölés
+</button>
+
+<div class="scrim" id="scrim" hidden></div>
+<form class="sheet" id="sheet" hidden autocomplete="off">
+  <div class="sheet-in">
+    <h2 id="sheetTitle">Új jelölés</h2>
+    <div class="field">
+      <label for="f-name">Mi az?</label>
+      <input type="text" id="f-name" list="names" placeholder="pl. Somersby körte" required>
+      <datalist id="names"></datalist>
+      <p class="hint" id="f-match" hidden></p>
+    </div>
+    <div class="field">
+      <span class="lbl" id="v-lbl">Ítélet</span>
+      <div class="seg" id="f-verdict" role="group" aria-labelledby="v-lbl">
+        <button type="button" data-v="like">Szereti</button>
+        <button type="button" data-v="dislike">Nem</button>
+        <button type="button" data-v="mixed">Vegyes</button>
+        <button type="button" data-v="fact">Tény</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="f-score">Pontszám (0 = utálja, 10 = imádja)</label>
+      <div class="range-row">
+        <input type="range" id="f-score" min="0" max="10" step="1" value="7">
+        <output id="f-out" for="f-score">7</output>
+      </div>
+      <label class="check"><input type="checkbox" id="f-noscore"> Nincs pontszám</label>
+    </div>
+    <div class="two">
+      <div class="field">
+        <label for="f-cat">Kategória</label>
+        <select id="f-cat"></select>
+      </div>
+      <div class="field">
+        <label for="f-date">Mikor?</label>
+        <input type="date" id="f-date" required>
+      </div>
+    </div>
+    <div class="field">
+      <label for="f-note">Megjegyzés</label>
+      <textarea id="f-note" placeholder="pl. csak hidegen, Anyuék-féle, nyáron…"></textarea>
+    </div>
+    <p class="err" id="f-err" hidden></p>
+    <div class="actions">
+      <button class="btn primary" type="submit" id="f-save">Mentés</button>
+      <button class="btn" type="button" id="f-cancel">Mégse</button>
+    </div>
+  </div>
+</form>
+
+<script>
+(function(){
+  const VERDICT = {like:"Szereti", dislike:"Nem szereti", mixed:"Vegyes", fact:"Tény"};
+  const CATS = ["Étel","Ital","Édesség","Egyéb"];
+  const $ = s => document.querySelector(s);
+  const state = {items:[], q:"", v:"all", cat:"all", sort:"recent", open:null, confirmDel:null, ready:false};
+  let db = null, col = null;
+
+  try{ const s = JSON.parse(localStorage.getItem("edith-ui")||"{}"); Object.assign(state, {v:s.v||"all", cat:s.cat||"all", sort:s.sort||"recent"}); }catch(e){}
+  const saveUi = () => { try{ localStorage.setItem("edith-ui", JSON.stringify({v:state.v,cat:state.cat,sort:state.sort})); }catch(e){} };
+
+  const norm = s => (s||"").toString().normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
+  const today = () => { const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
+  const fmtDate = d => { if(!d) return "Dátum nélkül"; const [y,m,dd]=d.split("-"); return y+". "+m+". "+dd+"."; };
+  const esc = s => (s??"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const dots = n => { let h='<div class="dots" aria-hidden="true">'; for(let i=1;i<=10;i++) h+='<i class="'+(n!=null&&i<=n?"on":"")+'"></i>'; return h+'</div>'; };
+
+  // filter controls
+  const vc = $("#vchips");
+  [["all","Mind"],["like","Szereti"],["dislike","Nem szereti"],["mixed","Vegyes"],["fact","Tény"]].forEach(([k,l])=>{
+    const b=document.createElement("button"); b.type="button"; b.className="chip"; b.dataset.v=k; b.textContent=l;
+    b.addEventListener("click",()=>{state.v=k; saveUi(); render();}); vc.appendChild(b);
+  });
+  $("#cat").innerHTML = '<option value="all">Minden kategória</option>'+CATS.map(c=>'<option>'+c+'</option>').join("");
+  $("#f-cat").innerHTML = CATS.map(c=>'<option>'+c+'</option>').join("");
+  $("#cat").value = state.cat; $("#sort").value = state.sort;
+  $("#cat").addEventListener("change",e=>{state.cat=e.target.value; saveUi(); render();});
+  $("#sort").addEventListener("change",e=>{state.sort=e.target.value; saveUi(); render();});
+  $("#q").addEventListener("input",e=>{state.q=e.target.value; render();});
+
+  function spark(pts){
+    if(pts.length<2) return '<p class="hint">Az alakulás grafikonja a második pontozott értékelés után jelenik meg.</p>';
+    const W=300,H=96,L=22,R=10,T=10,B=22, n=pts.length;
+    const x=i=> L + (n===1?0:i*(W-L-R)/(n-1)), y=v=> T + (10-v)*(H-T-B)/10;
+    let g=''; [0,5,10].forEach(v=>{ g+='<line class="gr" x1="'+L+'" x2="'+(W-R)+'" y1="'+y(v)+'" y2="'+y(v)+'"/><text x="'+(L-6)+'" y="'+(y(v)+3)+'" text-anchor="end">'+v+'</text>'; });
+    const line=pts.map((p,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(p.score).toFixed(1)).join(' ');
+    const area=line+' L'+x(n-1).toFixed(1)+' '+y(0)+' L'+x(0).toFixed(1)+' '+y(0)+' Z';
+    const lab=i=>{ const d=pts[i].date; return d? d.slice(2,4)+'.'+d.slice(5,7)+'.'+d.slice(8,10) : 'régebben'; };
+    const labs='<text x="'+x(0)+'" y="'+(H-6)+'" text-anchor="start">'+lab(0)+'</text><text x="'+x(n-1)+'" y="'+(H-6)+'" text-anchor="end">'+lab(n-1)+'</text>';
+    const dotsS=pts.map((p,i)=>'<circle class="pt'+(i===n-1?' last':'')+'" cx="'+x(i).toFixed(1)+'" cy="'+y(p.score).toFixed(1)+'" r="3.5"/>').join('');
+    return '<p class="hist-title">Alakulás</p><svg class="spark" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Pontszám alakulása: '+pts.map(p=>p.score).join(', ')+'">'+g+'<path class="ar" d="'+area+'"/><path class="ln" d="'+line+'"/>'+dotsS+labs+'</svg>';
+  }
+
+  function visible(){
+    const q = norm(state.q).trim();
+    let arr = state.items.filter(it=>{
+      if(state.v!=="all" && it.verdict!==state.v) return false;
+      if(state.cat!=="all" && it.category!==state.cat) return false;
+      if(!q) return true;
+      const hay = norm(it.name+" "+(it.entries||[]).map(e=>e.note||"").join(" "));
+      return q.split(/\s+/).every(w=>hay.includes(w));
+    });
+    const sc = it => it.score==null ? null : it.score;
+    const cmp = {
+      recent:(a,b)=> (b.lastDate||"").localeCompare(a.lastDate||"") || (b.updated||"").localeCompare(a.updated||""),
+      high:(a,b)=> (sc(b)??-1)-(sc(a)??-1) || a.name.localeCompare(b.name,"hu"),
+      low:(a,b)=> (sc(a)??11)-(sc(b)??11) || a.name.localeCompare(b.name,"hu"),
+      abc:(a,b)=> a.name.localeCompare(b.name,"hu")
+    }[state.sort];
+    return arr.sort(cmp);
+  }
+
+  function render(){
+    vc.querySelectorAll(".chip").forEach(b=>b.setAttribute("aria-pressed", String(b.dataset.v===state.v)));
+    const n = k => state.items.filter(i=>i.verdict===k).length;
+    $("#stats").innerHTML = state.items.length
+      ? '<span><b>'+state.items.length+'</b> tétel</span><span><b>'+n("like")+'</b> szereti</span><span><b>'+n("dislike")+'</b> nem szereti</span><span><b>'+n("mixed")+'</b> vegyes</span>'
+      : '';
+    $("#names").innerHTML = state.items.map(i=>'<option value="'+esc(i.name)+'"></option>').join("");
+    const list = $("#list");
+    if(!state.ready){ list.innerHTML = '<div class="empty"><strong>Betöltés…</strong></div>'; return; }
+    if(!state.items.length){ list.innerHTML = '<div class="empty"><strong>Még nincs semmi jelölve</strong><span>Az „Új jelölés” gombbal add hozzá az elsőt.</span></div>'; return; }
+    const arr = visible();
+    if(!arr.length){ list.innerHTML = '<div class="empty"><strong>Nincs találat</strong><span>Próbálj más szót, vagy állítsd vissza a szűrőt.</span></div>'; return; }
+    list.innerHTML = arr.map(it=>{
+      const last = (it.entries||[]).at(-1)||{};
+      const open = state.open===it.id;
+      const hasNum = it.score!=null;
+      const scored = (it.entries||[]).filter(e=>e.score!=null);
+      const prev = scored.length>1 ? scored[scored.length-2].score : null;
+      let trend = '';
+      if(prev!=null && it.score!=null && prev!==it.score){ const up=it.score>prev; trend='<span class="trend '+(up?'up':'down')+'">'+(up?'▲':'▼')+' korábban '+prev+'</span>'; }
+      let h = '<article class="card v-'+esc(it.verdict)+'"><div class="card-row">'
+        + '<button class="head" type="button" data-open="'+esc(it.id)+'" aria-expanded="'+open+'">'
+        + '<span class="stripe"></span>'
+        + '<span class="main"><span class="name">'+esc(it.name)+'</span>'
+        + '<span class="meta"><span class="pill">'+VERDICT[it.verdict]+'</span><span>'+esc(it.category)+'</span><span>'+fmtDate(it.lastDate)+'</span>'
+        + ((it.entries||[]).length>1?'<span>· '+it.entries.length+' jelölés</span>':'')+trend+'</span>'
+        + (last.note?'<span class="note">'+esc(last.note)+'</span>':'')
+        + '</span>'
+        + '<span class="score">'+(hasNum?'<span class="num">'+it.score+'<small>/10</small></span>'+dots(it.score):'<span class="num none">–</span>')+'</span>'
+        + '</button>'
+        + '<button class="rate-q" type="button" data-rate="'+esc(it.id)+'" aria-label="Új értékelés: '+esc(it.name)+'" title="Új értékelés"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>'
+        + '</div>';
+      if(open){
+        const hist = (it.entries||[]).slice().reverse();
+        h += '<div class="detail">' + spark(scored) + '<p class="hist-title">Előzmények</p><ul class="hist">'
+          + hist.map(e=>'<li><span class="d">'+fmtDate(e.date)+'</span><span class="t"><b>'+VERDICT[e.verdict]+(e.score!=null?' · '+e.score+'/10':'')+'</b>'+(e.note?' – '+esc(e.note):'')+'</span></li>').join("")
+          + '</ul><div class="actions">'
+          + '<button class="btn primary" type="button" data-rate="'+esc(it.id)+'">Új értékelés</button>'
+          + '<button class="btn" type="button" data-edit="'+esc(it.id)+'">Név / kategória</button>'
+          + '<button class="btn danger'+(state.confirmDel===it.id?' sure':'')+'" type="button" data-del="'+esc(it.id)+'">'+(state.confirmDel===it.id?'Biztosan törlöd?':'Törlés')+'</button>'
+          + '</div></div>';
+      }
+      return h+'</article>';
+    }).join("");
+  }
+
+  $("#list").addEventListener("click", async e=>{
+    const t = e.target.closest("button"); if(!t) return;
+    if(t.dataset.open){ state.open = state.open===t.dataset.open?null:t.dataset.open; state.confirmDel=null; render(); return; }
+    if(t.dataset.rate){ openSheet("rate", t.dataset.rate); return; }
+    if(t.dataset.edit){ openSheet("edit", t.dataset.edit); return; }
+    if(t.dataset.del){
+      const id=t.dataset.del;
+      if(state.confirmDel!==id){ state.confirmDel=id; render(); return; }
+      state.confirmDel=null; t.disabled=true;
+      try{ await col.doc(id).delete(); state.open=null; }catch(err){ showNotice("A törlés nem sikerült. Próbáld újra."); render(); }
+    }
+  });
+
+  // ---------- sheet ----------
+  let mode="new", target=null, verdict="like";
+  const setVerdict = v => { verdict=v; $("#f-verdict").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===v))); };
+  $("#f-verdict").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b) setVerdict(b.dataset.v); });
+  $("#f-score").addEventListener("input",e=>{ $("#f-out").textContent=e.target.value; $("#f-noscore").checked=false; syncScore(); });
+  $("#f-noscore").addEventListener("change",syncScore);
+  function syncScore(){ const off=$("#f-noscore").checked; $("#f-score").disabled=off; $("#f-out").textContent= off?"–":$("#f-score").value; }
+  $("#f-name").addEventListener("input",()=>{
+    if(mode!=="new") return;
+    const m = findByName($("#f-name").value);
+    const h=$("#f-match"); h.hidden=!m; if(m){ h.textContent="Már van ilyen tétel – az új jelölés az előzményeihez kerül."; $("#f-cat").value=m.category; }
+  });
+  const findByName = n => { const k=norm(n).trim(); return k ? state.items.find(i=>norm(i.name).trim()===k) : null; };
+
+  function openSheet(m, id){
+    mode=m; target=id?state.items.find(i=>i.id===id):null;
+    $("#f-err").hidden=true; $("#f-match").hidden=true;
+    const nameEl=$("#f-name"); nameEl.disabled=false;
+    const showRating = m!=="edit";
+    ["#f-verdict","#f-score","#f-date","#f-note"].forEach(s=>$(s).closest(".field").hidden=!showRating);
+    if(m==="new"){
+      $("#sheetTitle").textContent="Új jelölés"; nameEl.value=""; $("#f-cat").value="Étel";
+      setVerdict("like"); $("#f-score").value=7; $("#f-noscore").checked=false;
+      $("#f-date").value=today(); $("#f-note").value="";
+    }else if(m==="rate"){
+      $("#sheetTitle").textContent="Új értékelés"; nameEl.value=target.name; nameEl.disabled=true; $("#f-cat").value=target.category;
+      $("#f-match").textContent="Eddig: "+VERDICT[target.verdict]+(target.score!=null?", "+target.score+"/10":"")+" ("+fmtDate(target.lastDate)+"). Az új értékelés az előzményekhez kerül."; $("#f-match").hidden=false;
+      setVerdict(target.verdict); $("#f-score").value=target.score??7; $("#f-noscore").checked=target.score==null;
+      $("#f-date").value=today(); $("#f-note").value="";
+    }else{
+      $("#sheetTitle").textContent="Név és kategória"; nameEl.value=target.name; $("#f-cat").value=target.category;
+    }
+    syncScore();
+    $("#scrim").hidden=false; $("#sheet").hidden=false;
+    setTimeout(()=>{ (m==="rate"?$("#f-note"):nameEl).focus(); },50);
+  }
+  function closeSheet(){ $("#scrim").hidden=true; $("#sheet").hidden=true; $("#add").focus(); }
+  $("#add").addEventListener("click",()=>openSheet("new"));
+  $("#f-cancel").addEventListener("click",closeSheet);
+  $("#scrim").addEventListener("click",closeSheet);
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape" && !$("#sheet").hidden) closeSheet(); });
+
+  $("#sheet").addEventListener("submit", async e=>{
+    e.preventDefault();
+    if(!col){ return fail("A tárolás most nem érhető el, így nem lehet menteni."); }
+    const name=$("#f-name").value.trim(); if(!name) return fail("Add meg, mi az.");
+    const category=$("#f-cat").value;
+    const entry={date:$("#f-date").value||today(), verdict, score:$("#f-noscore").checked?null:Number($("#f-score").value), note:$("#f-note").value.trim()};
+    const now=new Date().toISOString();
+    const btn=$("#f-save"); btn.disabled=true;
+    try{
+      if(mode==="edit"){
+        await col.doc(target.id).update({name, category, updated:now});
+      }else{
+        const base = mode==="rate" ? target : findByName(name);
+        if(base){
+          const entries=[...(base.entries||[]), entry].sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+          const cur=entries.at(-1);
+          await col.doc(base.id).update({category, entries, verdict:cur.verdict, score:cur.score, lastDate:cur.date, updated:now});
+          state.open=base.id;
+        }else{
+          const ref=col.doc();
+          await ref.set({name, category, entries:[entry], verdict:entry.verdict, score:entry.score, lastDate:entry.date, created:now, updated:now});
+        }
+      }
+      closeSheet();
+    }catch(err){
+      fail(err&&err.code==="quota_exceeded" ? "Megtelt a tárhely – törölj néhány régi tételt." : "A mentés nem sikerült. Ellenőrizd a kapcsolatot, és próbáld újra.");
+    }finally{ btn.disabled=false; }
+  });
+  function fail(msg){ const el=$("#f-err"); el.textContent=msg; el.hidden=false; }
+  function showNotice(msg){ $("#notice").innerHTML='<div class="notice">'+esc(msg)+'</div>'; }
+
+  render();
+
+  // ---------- data (stored on this phone) ----------
+  const KEY="edith-szereti-v1", BKEY="edith-szereti-lastbackup";
+  const SEED={"almas-lepeny": {"category": "Édesség", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Kedvenc sütije · Keep-ből átemelve", "score": 10, "verdict": "like"}], "lastDate": null, "name": "Almás lepény", "score": 10, "updated": "2026-10-12T17:58:00Z", "verdict": "like"}, "campari": {"category": "Ital", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Keep-ből átemelve", "score": 4, "verdict": "dislike"}], "lastDate": null, "name": "Campari", "score": 4, "updated": "2026-10-12T17:58:00Z", "verdict": "dislike"}, "corona": {"category": "Ital", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "8–9 közötti · Keep-ből átemelve", "score": 8, "verdict": "like"}], "lastDate": null, "name": "Corona", "score": 8, "updated": "2026-10-12T17:58:00Z", "verdict": "like"}, "desperados": {"category": "Ital", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Keep-ből átemelve", "score": 5, "verdict": "mixed"}], "lastDate": null, "name": "Desperados", "score": 5, "updated": "2026-10-12T17:58:00Z", "verdict": "mixed"}, "fagyi": {"category": "Édesség", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Keep-ből átemelve", "score": 2, "verdict": "dislike"}], "lastDate": null, "name": "Fagyi", "score": 2, "updated": "2026-10-12T17:58:00Z", "verdict": "dislike"}, "feher-csoki": {"category": "Édesség", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Keep-ből átemelve", "score": 10, "verdict": "like"}], "lastDate": null, "name": "Fehér csoki", "score": 10, "updated": "2026-10-12T17:58:00Z", "verdict": "like"}, "frigarui": {"category": "Étel", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Keep-ből átemelve", "score": 5, "verdict": "dislike"}], "lastDate": null, "name": "Frigărui (rajon)", "score": 5, "updated": "2026-10-12T17:58:00Z", "verdict": "dislike"}, "fustolt-lazac": {"category": "Étel", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Keep-ből átemelve", "score": 2, "verdict": "dislike"}], "lastDate": null, "name": "Nyers füstölt lazac", "score": 2, "updated": "2026-10-12T17:58:00Z", "verdict": "dislike"}, "gyomber-udito": {"category": "Ital", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Általánosan · Keep-ből átemelve", "score": 8, "verdict": "like"}], "lastDate": null, "name": "Gyömbér üdítő", "score": 8, "updated": "2026-10-12T17:58:00Z", "verdict": "like"}, "hering": {"category": "Étel", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Keep-ből átemelve", "score": null, "verdict": "dislike"}], "lastDate": null, "name": "Hering", "score": null, "updated": "2026-10-12T17:58:00Z", "verdict": "dislike"}, "hipster": {"category": "Egyéb", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Líceumtól egyetemig · Keep-ből átemelve", "score": null, "verdict": "fact"}], "lastDate": null, "name": "Hipster időszak", "score": null, "updated": "2026-10-12T17:58:00Z", "verdict": "fact"}, "hurka": {"category": "Étel", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Nincs rosszul reggel tőle, és nem is lesz · Keep-ből átemelve", "score": null, "verdict": "fact"}], "lastDate": null, "name": "Hurka", "score": null, "updated": "2026-10-12T17:58:00Z", "verdict": "fact"}, "kapribogyo": {"category": "Étel", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Keep-ből átemelve", "score": 9, "verdict": "like"}], "lastDate": null, "name": "Kapribogyó", "score": 9, "updated": "2026-10-12T17:58:00Z", "verdict": "like"}, "karamell-fagyi-suti": {"category": "Édesség", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Keep-ből átemelve", "score": 0, "verdict": "dislike"}], "lastDate": null, "name": "Karamell fagyiban és sütiben", "score": 0, "updated": "2026-10-12T17:58:00Z", "verdict": "dislike"}, "karamella": {"category": "Édesség", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Keep-ből átemelve", "score": 2, "verdict": "dislike"}], "lastDate": null, "name": "Karamella", "score": 2, "updated": "2026-10-12T17:58:00Z", "verdict": "dislike"}, "kukorica": {"category": "Étel", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Keep-ből átemelve", "score": 10, "verdict": "like"}], "lastDate": null, "name": "Kukorica (sült, főtt)", "score": 10, "updated": "2026-10-12T17:58:00Z", "verdict": "like"}, "lakrisz": {"category": "Édesség", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Keep-ből átemelve", "score": 2, "verdict": "dislike"}], "lastDate": null, "name": "Lakrisz (svéd édesség)", "score": 2, "updated": "2026-10-12T17:58:00Z", "verdict": "dislike"}, "lefozos-kave": {"category": "Ital", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Ha nincs más, 10-es; amúgy 5-ös · Keep-ből átemelve", "score": 5, "verdict": "mixed"}], "lastDate": null, "name": "Lefőzős kávé", "score": 5, "updated": "2026-10-12T17:58:00Z", "verdict": "mixed"}, "mentolos-cukorka": {"category": "Édesség", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Keep-ből átemelve", "score": 0, "verdict": "dislike"}], "lastDate": null, "name": "Mentolos cukorka", "score": 0, "updated": "2026-10-12T17:58:00Z", "verdict": "dislike"}, "miso-leves": {"category": "Étel", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Keep-ből átemelve", "score": 8, "verdict": "like"}], "lastDate": null, "name": "Miso leves", "score": 8, "updated": "2026-10-12T17:58:00Z", "verdict": "like"}, "nutellas-kenyer": {"category": "Édesség", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "„Utálja 7-re” – miközben épp két pofára tömi · Keep-ből átemelve", "score": 3, "verdict": "dislike"}], "lastDate": null, "name": "Nutellás kenyér", "score": 3, "updated": "2026-10-12T17:58:00Z", "verdict": "dislike"}, "olivaolaj": {"category": "Étel", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Keep-ből átemelve", "score": 6, "verdict": "like"}], "lastDate": null, "name": "Olívaolaj", "score": 6, "updated": "2026-10-12T17:58:00Z", "verdict": "like"}, "paprikas-szalonna": {"category": "Étel", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Anyuék 2019-es · Keep-ből átemelve", "score": 8, "verdict": "like"}], "lastDate": null, "name": "Paprikás szalonna", "score": 8, "updated": "2026-10-12T17:58:00Z", "verdict": "like"}, "pisztrang": {"category": "Étel", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Általában · Keep-ből átemelve", "score": 7, "verdict": "like"}], "lastDate": null, "name": "Pisztráng", "score": 7, "updated": "2026-10-12T17:58:00Z", "verdict": "like"}, "ramen": {"category": "Étel", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Keep-ből átemelve", "score": 7, "verdict": "like"}], "lastDate": null, "name": "Ramen", "score": 7, "updated": "2026-10-12T17:58:00Z", "verdict": "like"}, "rizs": {"category": "Étel", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Nem biztos – kérdőjellel volt jelölve · Keep-ből átemelve", "score": null, "verdict": "dislike"}], "lastDate": null, "name": "Rizs", "score": null, "updated": "2026-10-12T17:58:00Z", "verdict": "dislike"}, "rukkola": {"category": "Étel", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Keep-ből átemelve", "score": 10, "verdict": "like"}], "lastDate": null, "name": "Rukkola", "score": 10, "updated": "2026-10-12T17:58:00Z", "verdict": "like"}, "saslik": {"category": "Étel", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Keep-ből átemelve", "score": 5, "verdict": "dislike"}], "lastDate": null, "name": "Saslik", "score": 5, "updated": "2026-10-12T17:58:00Z", "verdict": "dislike"}, "somersby-alma": {"category": "Ital", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Keep-ből átemelve", "score": 3, "verdict": "dislike"}], "lastDate": null, "name": "Somersby alma", "score": 3, "updated": "2026-10-12T17:58:00Z", "verdict": "dislike"}, "somersby-korte": {"category": "Ital", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Keep-ből átemelve", "score": 10, "verdict": "like"}], "lastDate": null, "name": "Somersby körte", "score": 10, "updated": "2026-10-12T17:58:00Z", "verdict": "like"}, "sos-karamell": {"category": "Édesség", "created": "2026-10-12T17:58:00Z", "entries": [{"date": null, "note": "Régebben – Keep-ből átemelve", "score": 0, "verdict": "dislike"}, {"date": null, "note": "Most 6-os – Keep-ből átemelve", "score": 6, "verdict": "like"}], "lastDate": null, "name": "Sós karamell", "score": 6, "updated": "2026-10-12T17:58:00Z", "verdict": "like"}};
+  let store;
+  try{ const r=localStorage.getItem(KEY); store = r ? JSON.parse(r) : JSON.parse(JSON.stringify(SEED)); }catch(e){ store=JSON.parse(JSON.stringify(SEED)); }
+  const subs=[];
+  function emit(){ const docs=Object.keys(store).map(id=>({id, data:()=>store[id]})); subs.forEach(f=>f({docs})); }
+  function persist(){
+    try{ localStorage.setItem(KEY, JSON.stringify(store)); }
+    catch(e){ showNotice("Nem sikerült menteni a telefonra. Készíts mentést fájlba."); }
+    emit();
+  }
+  col = {
+    doc(id){
+      id = id || ("i"+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
+      return {
+        id,
+        async set(d){ store[id]=d; persist(); },
+        async update(d){ if(!store[id]) throw {code:"invalid_argument"}; store[id]=Object.assign({}, store[id], d); persist(); },
+        async delete(){ delete store[id]; persist(); }
+      };
+    },
+    onSnapshot(f){ subs.push(f); setTimeout(emit,0); return ()=>{}; }
+  };
+  try{ if(!localStorage.getItem(KEY)) localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){}
+  if(navigator.storage && navigator.storage.persist){ navigator.storage.persist().catch(()=>{}); }
+  col.onSnapshot(snap=>{ state.items = snap.docs.map(d=>Object.assign({id:d.id}, d.data())); state.ready=true; render(); });
+
+  // ---------- backup ----------
+  const bkMsg = (t)=>{ const m=$("#bk-msg"); m.textContent=t; m.hidden=!t; };
+  function showLast(){
+    let last=null; try{ last=localStorage.getItem(BKEY); }catch(e){}
+    $("#bk-info").textContent = "Az adatok csak ezen a telefonon vannak. "+(last ? "Utolsó mentés: "+fmtDate(last)+"." : "Még nem készült mentés.")+" Időnként ments egy példányt a Fájlok appba vagy e-mailben magadnak.";
+  }
+  showLast();
+  $("#bk-export").addEventListener("click", async ()=>{
+    const name="edith-szereti-"+today()+".json";
+    const blob=new Blob([JSON.stringify({app:"edith-szereti", version:1, exported:new Date().toISOString(), items:store}, null, 2)], {type:"application/json"});
+    let done=false;
+    try{
+      const file=new File([blob], name, {type:"application/json"});
+      if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:"Edith szereti mentés"}); done=true; }
+    }catch(e){ if(e && e.name==="AbortError"){ return; } }
+    if(!done){
+      const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    }
+    try{ localStorage.setItem(BKEY, today()); }catch(e){}
+    showLast(); bkMsg("Mentés elkészült: "+name);
+  });
+  let pending=null;
+  $("#bk-import").addEventListener("click", ()=>{ $("#bk-file").value=""; $("#bk-file").click(); });
+  $("#bk-file").addEventListener("change", async e=>{
+    const f=e.target.files && e.target.files[0]; if(!f) return;
+    try{
+      const j=JSON.parse(await f.text()); const items=j && j.items;
+      if(!items || typeof items!=="object") throw 0;
+      pending=items; $("#bk-confirm").hidden=false;
+      bkMsg("A fájlban "+Object.keys(items).length+" tétel van. A betöltés felülírja az azonos tételeket, a többit megtartja.");
+    }catch(err){ pending=null; $("#bk-confirm").hidden=true; bkMsg("Ez nem egy Edith szereti mentésfájl. Válaszd a „Mentés fájlba” gombbal készült .json fájlt."); }
+  });
+  $("#bk-yes").addEventListener("click", ()=>{ if(!pending) return; Object.assign(store, pending); pending=null; $("#bk-confirm").hidden=true; persist(); bkMsg("Betöltve."); });
+  $("#bk-no").addEventListener("click", ()=>{ pending=null; $("#bk-confirm").hidden=true; bkMsg(""); });
+
+  if("serviceWorker" in navigator){ window.addEventListener("load", ()=>navigator.serviceWorker.register("sw.js").catch(()=>{})); }
+})();
+</script>
+
+</body>
+</html>
