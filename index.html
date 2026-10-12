@@ -112,6 +112,10 @@ select:focus,input:focus,textarea:focus{outline:2px solid var(--accent);outline-
 .hist .d{color:var(--muted);font-variant-numeric:tabular-nums}
 .hist .t{min-width:0;overflow-wrap:anywhere}
 .actions{display:flex;gap:8px;flex-wrap:wrap}
+.eacts{display:flex;gap:16px;margin-top:4px}
+.link{font:inherit;background:none;border:0;padding:2px 0;cursor:pointer;font-size:.82rem;font-weight:700;color:var(--accent)}
+.link.danger{color:var(--dislike)}
+.link:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
 .btn{font:inherit;font-size:.9rem;font-weight:700;border-radius:10px;padding:9px 14px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .btn.danger{color:var(--dislike);border-color:var(--dislike-soft)}
@@ -241,7 +245,7 @@ textarea{resize:vertical;min-height:64px}
       </div>
       <div class="field">
         <label for="f-date">Mikor?</label>
-        <input type="date" id="f-date" required>
+        <input type="date" id="f-date">
       </div>
     </div>
     <div class="field">
@@ -353,7 +357,13 @@ textarea{resize:vertical;min-height:64px}
       if(open){
         const hist = (it.entries||[]).slice().reverse();
         h += '<div class="detail">' + spark(scored) + '<p class="hist-title">Előzmények</p><ul class="hist">'
-          + hist.map(e=>'<li><span class="d">'+fmtDate(e.date)+'</span><span class="t"><b>'+VERDICT[e.verdict]+(e.score!=null?' · '+e.score+'/10':'')+'</b>'+(e.note?' – '+esc(e.note):'')+'</span></li>').join("")
+          + hist.map((e,k)=>{
+              const idx=it.entries.length-1-k, key=it.id+":"+idx, sure=state.confirmEntry===key, only=it.entries.length===1;
+              return '<li><span class="d">'+fmtDate(e.date)+'</span><span class="t"><b>'+VERDICT[e.verdict]+(e.score!=null?' · '+e.score+'/10':'')+'</b>'+(e.note?' – '+esc(e.note):'')
+                + '<span class="eacts"><button class="link" type="button" data-eedit="1" data-id="'+esc(it.id)+'" data-idx="'+idx+'">Szerkesztés</button>'
+                + '<button class="link danger" type="button" data-edel="1" data-id="'+esc(it.id)+'" data-idx="'+idx+'">'+(sure?(only?'Biztosan? Az egész tétel törlődik':'Biztosan törlöd?'):'Törlés')+'</button></span>'
+                + '</span></li>';
+            }).join("")
           + '</ul><div class="actions">'
           + '<button class="btn primary" type="button" data-rate="'+esc(it.id)+'">Új értékelés</button>'
           + '<button class="btn" type="button" data-edit="'+esc(it.id)+'">Név / kategória</button>'
@@ -366,7 +376,21 @@ textarea{resize:vertical;min-height:64px}
 
   $("#list").addEventListener("click", async e=>{
     const t = e.target.closest("button"); if(!t) return;
-    if(t.dataset.open){ state.open = state.open===t.dataset.open?null:t.dataset.open; state.confirmDel=null; render(); return; }
+    if(t.dataset.open){ state.open = state.open===t.dataset.open?null:t.dataset.open; state.confirmDel=null; state.confirmEntry=null; render(); return; }
+    if(t.dataset.eedit){ state.confirmEntry=null; openSheet("entry", t.dataset.id, Number(t.dataset.idx)); return; }
+    if(t.dataset.edel){
+      const key=t.dataset.id+":"+t.dataset.idx;
+      if(state.confirmEntry!==key){ state.confirmEntry=key; render(); return; }
+      state.confirmEntry=null;
+      const it=state.items.find(i=>i.id===t.dataset.id); if(!it) return;
+      const entries=(it.entries||[]).filter((_,i)=>i!==Number(t.dataset.idx));
+      t.disabled=true;
+      try{
+        if(!entries.length){ await col.doc(it.id).delete(); state.open=null; }
+        else{ await col.doc(it.id).update(summary(entries)); }
+      }catch(err){ showNotice("A törlés nem sikerült. Próbáld újra."); render(); }
+      return;
+    }
     if(t.dataset.rate){ openSheet("rate", t.dataset.rate); return; }
     if(t.dataset.edit){ openSheet("edit", t.dataset.edit); return; }
     if(t.dataset.del){
@@ -378,7 +402,12 @@ textarea{resize:vertical;min-height:64px}
   });
 
   // ---------- sheet ----------
-  let mode="new", target=null, verdict="like";
+  let mode="new", target=null, verdict="like", entryIdx=-1;
+  function summary(entries){
+    const sorted=entries.slice().sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+    const cur=sorted[sorted.length-1];
+    return {entries:sorted, verdict:cur.verdict, score:cur.score, lastDate:cur.date, updated:new Date().toISOString()};
+  }
   const setVerdict = v => { verdict=v; $("#f-verdict").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===v))); };
   $("#f-verdict").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b) setVerdict(b.dataset.v); });
   $("#f-score").addEventListener("input",e=>{ $("#f-out").textContent=e.target.value; $("#f-noscore").checked=false; syncScore(); });
@@ -391,7 +420,7 @@ textarea{resize:vertical;min-height:64px}
   });
   const findByName = n => { const k=norm(n).trim(); return k ? state.items.find(i=>norm(i.name).trim()===k) : null; };
 
-  function openSheet(m, id){
+  function openSheet(m, id, idx){
     mode=m; target=id?state.items.find(i=>i.id===id):null;
     $("#f-err").hidden=true; $("#f-match").hidden=true;
     const nameEl=$("#f-name"); nameEl.disabled=false;
@@ -406,12 +435,18 @@ textarea{resize:vertical;min-height:64px}
       $("#f-match").textContent="Eddig: "+VERDICT[target.verdict]+(target.score!=null?", "+target.score+"/10":"")+" ("+fmtDate(target.lastDate)+"). Az új értékelés az előzményekhez kerül."; $("#f-match").hidden=false;
       setVerdict(target.verdict); $("#f-score").value=target.score??7; $("#f-noscore").checked=target.score==null;
       $("#f-date").value=today(); $("#f-note").value="";
+    }else if(m==="entry"){
+      entryIdx=idx; const e=target.entries[idx]||{};
+      $("#sheetTitle").textContent="Értékelés szerkesztése"; nameEl.value=target.name; nameEl.disabled=true; $("#f-cat").value=target.category;
+      setVerdict(e.verdict||"like"); $("#f-score").value=e.score??7; $("#f-noscore").checked=e.score==null;
+      $("#f-date").value=e.date||""; $("#f-note").value=e.note||"";
+      $("#f-match").textContent="Üresen hagyott dátum: „Dátum nélkül”."; $("#f-match").hidden=false;
     }else{
       $("#sheetTitle").textContent="Név és kategória"; nameEl.value=target.name; $("#f-cat").value=target.category;
     }
     syncScore();
     $("#scrim").hidden=false; $("#sheet").hidden=false;
-    setTimeout(()=>{ (m==="rate"?$("#f-note"):nameEl).focus(); },50);
+    setTimeout(()=>{ (m==="rate"||m==="entry"?$("#f-note"):nameEl).focus(); },50);
   }
   function closeSheet(){ $("#scrim").hidden=true; $("#sheet").hidden=true; $("#add").focus(); }
   $("#add").addEventListener("click",()=>openSheet("new"));
@@ -430,6 +465,11 @@ textarea{resize:vertical;min-height:64px}
     try{
       if(mode==="edit"){
         await col.doc(target.id).update({name, category, updated:now});
+      }else if(mode==="entry"){
+        const entries=target.entries.slice();
+        entries[entryIdx]=Object.assign({}, entry, {date:$("#f-date").value||null});
+        await col.doc(target.id).update(Object.assign({category}, summary(entries)));
+        state.open=target.id;
       }else{
         const base = mode==="rate" ? target : findByName(name);
         if(base){
